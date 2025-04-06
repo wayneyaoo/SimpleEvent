@@ -1,0 +1,351 @@
+/* Base Styles */
+:root {
+    --primary-color: #3b82f6;
+    --primary-hover: #2563eb;
+    --danger-color: #ef4444;
+    --danger-hover: #dc2626;
+    --success-color: #10b981;
+    --success-hover: #059669;
+    --warning-color: #f59e0b;
+    --warning-hover: #d97706;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f3f4f6;
+    color: #1f2937;
+}
+
+/* Form Elements */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.875rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    background-color: white;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-input::placeholder {
+    color: #9ca3af;
+}
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+.btn-primary:disabled {
+    background-color: #93c5fd;
+    cursor: not-allowed;
+}
+
+.btn-danger {
+    background-color: #ef4444;
+    color: white;
+    border: none;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+}
+
+.btn-danger .material-icons {
+    color: white;
+}
+
+/* Icon Buttons */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    border: none;
+}
+
+.btn-icon:hover {
+    transform: translateY(-1px);
+}
+
+.btn-icon .material-icons {
+    font-size: 1.25rem;
+}
+
+.btn-icon.btn-danger {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.btn-icon.btn-danger:hover {
+    background-color: #fee2e2;
+}
+
+.btn-icon.btn-success {
+    color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.btn-icon.btn-success:hover {
+    background-color: #d1fae5;
+}
+
+/* Modals */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 1rem;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 32rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.modal-content h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #111827;
+}
+
+/* Timeline styles */
+.timeline-item {
+    position: relative;
+    padding-left: 2rem;
+    margin-bottom: 1rem;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #e5e7eb;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -0.375rem;
+    top: 0.5rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    background-color: #3b82f6;
+}
+
+/* Timeline chart styles */
+.timeline-chart {
+    min-height: 400px;
+    padding: 1.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    background-color: white;
+}
+
+/* Event card styles */
+.event-card {
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.event-type {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: white;
+    margin-right: 0.5rem;
+}
+
+.event-date {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.event-note {
+    margin-top: 0.75rem;
+    color: #4b5563;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* Twitter-like posting area */
+.posting-area {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    background-color: white;
+    margin-top: 1rem;
+}
+
+.posting-area textarea {
+    resize: none;
+    border: none;
+    outline: none;
+    width: 100%;
+    min-height: 80px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.posting-area .actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* Undo Toast */
+.undo-toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background-color: #fef3c7;
+    border: 1px solid #fbbf24;
+    border-radius: 0.5rem;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    z-index: 100;
+    animation: slideIn 0.3s ease-out;
+}
+
+.undo-toast p {
+    color: #92400e;
+    font-weight: 500;
+    margin: 0;
+}
+
+.undo-toast button {
+    background-color: #fbbf24;
+    color: #92400e;
+    border: none;
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.undo-toast button:hover {
+    background-color: #f59e0b;
+    transform: translateY(-1px);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Utility classes */
+.space-y-4 > * + * {
+    margin-top: 1rem;
+}
+
+.space-x-2 > * + * {
+    margin-left: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (min-width: 768px) {
+    .modal-content {
+        padding: 2rem;
+    }
+    
+    .form-input {
+        font-size: 1rem;
+    }
+    
+    .btn {
+        font-size: 1rem;
+    }
+}
+
+/* Custom scrollbar for event type management */
+.max-h-96::-webkit-scrollbar {
+    width: 4px;
+}
+
+.max-h-96::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.max-h-96::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.3);
+    border-radius: 2px;
+}
+
+.max-h-96:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.5);
+} 

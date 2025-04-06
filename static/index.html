@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimpleEvent</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="bg-gray-100">
+    <div id="app">
+        <!-- Landing Page -->
+        <div v-if="!hasTimelines && !showCreateTimelineModal" class="min-h-screen flex items-center justify-center">
+            <div class="text-center">
+                <h1 class="text-3xl font-bold mb-8">Welcome to SimpleEvent</h1>
+                <div class="space-y-4">
+                    <button @click="showCreateTimelineModal = true" class="block w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600">
+                        Create New Timeline
+                    </button>
+                    <button @click="showImportTimelineModal = true" class="block w-full border border-gray-300 px-6 py-3 rounded-lg hover:bg-gray-50">
+                        Import Timeline
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Application -->
+        <div v-else class="min-h-screen">
+            <nav class="bg-white shadow">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between h-16">
+                        <div class="flex">
+                            <div class="flex-shrink-0 flex items-center">
+                                <h1 class="text-xl font-bold text-gray-800">SimpleEvent</h1>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <div class="px-4 py-6 sm:px-0">
+                    <div class="grid grid-cols-12 gap-6">
+                        <!-- Left Panel (4 columns) -->
+                        <div class="col-span-4">
+                            <div class="bg-white shadow rounded-lg p-6">
+                                <div class="flex space-x-2 mb-6">
+                                    <button @click="showCreateTimelineModal = true" class="flex-1 btn btn-icon" title="Create New Timeline">
+                                        <span class="material-icons">add_circle</span>
+                                        <span>New</span>
+                                    </button>
+                                    <button @click="showImportTimelineModal = true" class="flex-1 btn btn-icon" title="Import Timeline">
+                                        <span class="material-icons">file_upload</span>
+                                        <span>Import</span>
+                                    </button>
+                                </div>
+                                <div class="space-y-1">
+                                    <div v-for="timeline in timelines" 
+                                         :key="timeline.id"
+                                         @click="selectTimeline(timeline)"
+                                         class="p-2 rounded cursor-pointer"
+                                         :class="{'bg-blue-50': selectedTimeline && selectedTimeline.id === timeline.id}">
+                                        <span class="truncate">{{ timeline.name }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel (8 columns) -->
+                        <div class="col-span-8" v-if="selectedTimeline">
+                            <!-- Header Container -->
+                            <div class="bg-white shadow rounded-lg p-6 mb-6">
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+                                    <div class="flex-1 min-w-0">
+                                        <h2 class="text-2xl font-medium text-gray-900 truncate">{{ selectedTimeline.name }}</h2>
+                                        <p class="text-gray-500 mt-1 break-words">{{ selectedTimeline.description }}</p>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button @click="showEditTimelineModal = true" class="btn btn-icon bg-blue-50 text-blue-600 hover:bg-blue-100 hover:shadow-md">
+                                            <span class="material-icons">edit</span>
+                                            <span>Edit</span>
+                                        </button>
+                                        <button @click="showDeleteTimelineModal = true" class="btn btn-icon bg-red-50 text-red-600 hover:bg-red-100 hover:shadow-md">
+                                            <span class="material-icons">delete</span>
+                                            <span>Delete</span>
+                                        </button>
+                                        <button @click="showTimelineView = true" class="btn btn-icon bg-green-50 text-green-600 hover:bg-green-100 hover:shadow-md">
+                                            <span class="material-icons">timeline</span>
+                                            <span>Timeline View</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Twitter-like Event Creation -->
+                                <div class="border rounded-lg p-4 mt-6">
+                                    <div class="space-y-3">
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <!-- Searchable Event Type Selector -->
+                                            <div class="relative">
+                                                <input 
+                                                    type="text"
+                                                    v-model="eventTypeSearch"
+                                                    @focus="showEventTypeDropdown = true"
+                                                    @blur="showEventTypeDropdown = false"
+                                                    @keydown.esc="showEventTypeDropdown = false"
+                                                    class="form-input w-full pl-8"
+                                                    placeholder="Search event type..."
+                                                >
+                                                <div v-if="newEvent.type" class="absolute left-2 top-[35%] w-3 h-3 rounded-full" :style="{ backgroundColor: getEventTypeColor(newEvent.type) }"></div>
+                                                <div v-if="showEventTypeDropdown" 
+                                                     class="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                                    <div v-for="type in filteredEventTypes" 
+                                                         :key="type.name"
+                                                         @mousedown.prevent="selectEventType(type)"
+                                                         class="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center space-x-2">
+                                                        <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: type.color }"></div>
+                                                        <span>{{ type.name }}</span>
+                                                    </div>
+                                                    <div v-if="filteredEventTypes.length === 0" 
+                                                         class="px-4 py-2 text-gray-500">
+                                                        No matching event types
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <input 
+                                                type="text" 
+                                                v-model="newEvent.time" 
+                                                class="form-input"
+                                                placeholder="When did it happen?"
+                                                onfocus="this.type='date'"
+                                                onblur="if(!this.value)this.type='text'"
+                                            >
+                                        </div>
+                                        <textarea v-model="newEvent.note" class="w-full form-input" rows="2" placeholder="What's happening?"></textarea>
+                                        <div class="flex justify-between items-center">
+                                            <button @click="showCreateEventTypeModal = true" class="text-blue-500 hover:text-blue-600">
+                                                Manage Types
+                                            </button>
+                                            <button @click="createEvent" class="btn btn-primary" :disabled="!newEvent.type">
+                                                Post Event
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Content Area -->
+                            <div class="space-y-4">
+                                <div v-for="event in sortedEvents" :key="event.id" class="bg-white shadow rounded-lg overflow-hidden">
+                                    <div class="p-4">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <span class="inline-block px-3 py-1 rounded-lg text-sm font-medium text-white" :style="{ backgroundColor: getEventTypeColor(event.type) }">
+                                                    {{ event.type }}
+                                                </span>
+                                                <span class="text-sm text-gray-500 ml-2">{{ formatDate(event.time) }}</span>
+                                            </div>
+                                            <div class="space-x-2">
+                                                <button @click="editEvent(event)" class="text-blue-500 hover:text-blue-600">
+                                                    Edit
+                                                </button>
+                                                <button @click="deleteEvent(event)" class="text-red-500 hover:text-red-600">
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p v-if="event.note" class="mt-2 text-gray-600">{{ event.note }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Modals -->
+        <!-- Create Timeline Modal -->
+        <div v-if="showCreateTimelineModal" class="modal">
+            <div class="modal-content">
+                <h3 class="text-lg font-medium mb-4">Create New Timeline</h3>
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input v-model="newTimeline.name" type="text" class="form-input" placeholder="Timeline name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea v-model="newTimeline.description" class="form-input" placeholder="Timeline description"></textarea>
+                </div>
+                <div class="flex justify-end space-x-2 mt-4">
+                    <button @click="showCreateTimelineModal = false" class="btn">Cancel</button>
+                    <button @click="createTimeline" class="btn btn-primary">Create</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Timeline Modal -->
+        <div v-if="showEditTimelineModal" class="modal">
+            <div class="modal-content">
+                <h3 class="text-lg font-medium mb-4">Edit Timeline</h3>
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input v-model="selectedTimeline.name" type="text" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea v-model="selectedTimeline.description" class="form-input"></textarea>
+                </div>
+                <div class="flex justify-end space-x-2 mt-4">
+                    <button @click="showEditTimelineModal = false" class="btn">Cancel</button>
+                    <button @click="updateTimeline" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Timeline Modal -->
+        <div v-if="showDeleteTimelineModal" class="modal">
+            <div class="modal-content">
+                <h3 class="text-lg font-medium mb-4">Delete Timeline</h3>
+                <p class="text-gray-600 mb-4">Are you sure you want to delete this timeline? This action cannot be undone.</p>
+                <div class="flex justify-end space-x-2">
+                    <button @click="showDeleteTimelineModal = false" class="btn">Cancel</button>
+                    <button @click="deleteTimeline" class="btn btn-danger">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Event Modal -->
+        <div v-if="showCreateEventModal" class="modal">
+            <div class="modal-content">
+                <h3 class="text-lg font-medium mb-4">Create New Event</h3>
+                <div class="form-group">
+                    <label class="form-label">Event Type</label>
+                    <select v-model="newEvent.type" class="form-input">
+                        <option v-for="type in selectedTimeline.event_types" :key="type.name" :value="type.name">
+                            {{ type.name }}
+                        </option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input v-model="newEvent.time" type="date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Note</label>
+                    <textarea v-model="newEvent.note" class="form-input" placeholder="Event note"></textarea>
+                </div>
+                <div class="flex justify-end space-x-2 mt-4">
+                    <button @click="showCreateEventModal = false" class="btn">Cancel</button>
+                    <button @click="createEvent" class="btn btn-primary">Create</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Event Modal -->
+        <div v-if="showEditEventModal" class="modal">
+            <div class="modal-content">
+                <h3 class="text-lg font-medium mb-4">Edit Event</h3>
+                <div class="form-group">
+                    <label class="form-label">Event Type</label>
+                    <select v-model="editingEvent.type" class="form-input">
+                        <option v-for="type in selectedTimeline.event_types" :key="type.name" :value="type.name">
+                            {{ type.name }}
+                        </option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input v-model="editingEvent.time" type="date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Note</label>
+                    <textarea v-model="editingEvent.note" class="form-input"></textarea>
+                </div>
+                <div class="flex justify-end space-x-2 mt-4">
+                    <button @click="showEditEventModal = false" class="btn">Cancel</button>
+                    <button @click="updateEvent" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Event Type Management Modal -->
+        <div v-if="showCreateEventTypeModal" class="modal" @click.self="showCreateEventTypeModal = false" @keydown.esc="showCreateEventTypeModal = false">
+            <div class="modal-content">
+                <h3 class="text-lg font-medium mb-4">Manage Event Types</h3>
+                
+                <!-- New Event Type Form -->
+                <div class="mb-6">
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <input v-model="newEventType.name" type="text" class="form-input" placeholder="Event type name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Color</label>
+                        <div class="grid grid-cols-6 gap-2">
+                            <button v-for="color in popularColors" 
+                                    :key="color.value"
+                                    @click="newEventType.color = color.value"
+                                    class="w-8 h-8 rounded-full border-2"
+                                    :class="{'border-blue-500': newEventType.color === color.value}"
+                                    :style="{ backgroundColor: color.value }"
+                                    :title="color.name">
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex justify-end mt-4">
+                        <button @click="createEventType" class="btn btn-primary">Add Type</button>
+                    </div>
+                </div>
+
+                <!-- Existing Event Types List -->
+                <div class="max-h-96 overflow-y-auto">
+                    <div v-for="type in selectedTimeline.event_types" :key="type.name" class="flex items-center justify-between p-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-4 h-4 rounded-full" :style="{ backgroundColor: type.color }"></div>
+                            <span>{{ type.name }}</span>
+                        </div>
+                        <div class="space-x-2">
+                            <button @click="editEventType(type)" class="text-blue-500 hover:text-blue-600">
+                                <span class="material-icons">edit</span>
+                            </button>
+                            <button @click="deleteEventType(type)" class="text-red-500 hover:text-red-600">
+                                <span class="material-icons">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Event Type Modal -->
+        <div v-if="showEditEventTypeModal" class="modal">
+            <div class="modal-content">
+                <h3 class="text-lg font-medium mb-4">Edit Event Type</h3>
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input v-model="editingEventType.name" type="text" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Color</label>
+                    <div class="grid grid-cols-5 gap-2">
+                        <button v-for="color in popularColors" :key="color.value"
+                                class="w-full h-8 rounded-md transition-transform hover:scale-105"
+                                :style="{ backgroundColor: color.value }"
+                                :class="{ 'ring-2 ring-offset-2 ring-blue-500': editingEventType.color === color.value }"
+                                @click="editingEventType.color = color.value"
+                                :title="color.name">
+                        </button>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 mt-4">
+                    <button @click="showEditEventTypeModal = false" class="btn">Cancel</button>
+                    <button @click="updateEventType" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import Timeline Modal -->
+        <div v-if="showImportTimelineModal" class="modal">
+            <div class="modal-content">
+                <h3 class="text-lg font-medium mb-4">Import Timeline</h3>
+                <div class="form-group">
+                    <label class="form-label">Timeline JSON File</label>
+                    <input type="file" @change="handleFileImport" accept=".json" class="form-input">
+                </div>
+                <div class="flex justify-end space-x-2 mt-4">
+                    <button @click="showImportTimelineModal = false" class="btn">Cancel</button>
+                    <button @click="importTimeline" class="btn btn-primary">Import</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline View Modal -->
+        <div v-if="showTimelineView" class="modal">
+            <div class="modal-content max-w-4xl">
+                <h3 class="text-lg font-medium mb-4">Timeline View</h3>
+                <div class="overflow-x-auto">
+                    <div class="timeline-chart">
+                        <!-- Timeline visualization will be rendered here -->
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 mt-4">
+                    <button @click="exportTimelineAsPDF" class="btn btn-primary">Export as PDF</button>
+                    <button @click="showTimelineView = false" class="btn">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Event Type Delete Warning Modal -->
+        <div v-if="showDeleteEventTypeWarning" class="modal">
+            <div class="modal-content">
+                <div class="flex items-start space-x-3 mb-4">
+                    <span class="material-icons text-yellow-500 mt-0.5">warning</span>
+                    <h3 class="text-lg font-medium">Cannot Delete Event Type</h3>
+                </div>
+                <p class="text-gray-600 mb-4">
+                    This event type is currently in use by one or more events. Please update or delete all events using this type before deleting it.
+                </p>
+                <div class="flex justify-end">
+                    <button @click="showDeleteEventTypeWarning = false" class="btn btn-primary">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Duplicate Event Type Warning Modal -->
+        <div v-if="showDuplicateEventTypeWarning" class="modal">
+            <div class="modal-content">
+                <div class="flex items-start space-x-3 mb-4">
+                    <span class="material-icons text-yellow-500 mt-0.5">warning</span>
+                    <h3 class="text-lg font-medium">Event Type Already Exists</h3>
+                </div>
+                <p class="text-gray-600 mb-4">
+                    An event type with this name already exists. Please choose a different name.
+                </p>
+                <div class="flex justify-end">
+                    <button @click="showDuplicateEventTypeWarning = false" class="btn btn-primary">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty Event Type Warning Modal -->
+        <div v-if="showEmptyEventTypeWarning" class="modal">
+            <div class="modal-content">
+                <div class="flex items-start space-x-3 mb-4">
+                    <span class="material-icons text-yellow-500 mt-0.5">warning</span>
+                    <h3 class="text-lg font-medium">Empty Event Type Name</h3>
+                </div>
+                <p class="text-gray-600 mb-4">
+                    Event type name cannot be empty. Please enter a name for the event type.
+                </p>
+                <div class="flex justify-end">
+                    <button @click="showEmptyEventTypeWarning = false" class="btn btn-primary">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Event Confirmation Modal -->
+        <div v-if="showDeleteEventConfirmation" class="modal">
+            <div class="modal-content">
+                <div class="flex items-start space-x-3 mb-4">
+                    <span class="material-icons text-yellow-500 mt-0.5">warning</span>
+                    <h3 class="text-lg font-medium">Delete Event</h3>
+                </div>
+                <p class="text-gray-600 mb-4">
+                    Are you sure you want to delete this event? This action cannot be undone.
+                </p>
+                <div class="flex justify-end space-x-2">
+                    <button @click="showDeleteEventConfirmation = false" class="btn">Cancel</button>
+                    <button @click="confirmDeleteEvent" class="btn btn-danger">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Event Type Confirmation Modal -->
+        <div v-if="showDeleteEventTypeConfirmation" class="modal">
+            <div class="modal-content">
+                <div class="flex items-start space-x-3 mb-4">
+                    <span class="material-icons text-yellow-500 mt-0.5">warning</span>
+                    <h3 class="text-lg font-medium">Delete Event Type</h3>
+                </div>
+                <p class="text-gray-600 mb-4">
+                    Are you sure you want to delete this event type? This action cannot be undone.
+                </p>
+                <div class="flex justify-end space-x-2">
+                    <button @click="showDeleteEventTypeConfirmation = false" class="btn">Cancel</button>
+                    <button @click="confirmDeleteEventType" class="btn btn-danger">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/static/js/app.js"></script>
+</body>
+</html> 
