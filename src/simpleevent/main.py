@@ -148,23 +148,32 @@ async def create_event_type(timeline_id: str, event_type: dict):
 
 @app.put("/api/timelines/{timeline_id}/event-types/{type_name}")
 async def update_event_type(timeline_id: str, type_name: str, event_type: dict):
+    """Update an event type in the timeline."""
     timeline = get_timeline(timeline_id)
     if not timeline:
         raise HTTPException(status_code=404, detail="Timeline not found")
     
-    # Find and update the event type
-    event_type_index = next((i for i, et in enumerate(timeline["event_types"]) if et["name"] == type_name), None)
-    if event_type_index is None:
-        raise HTTPException(status_code=404, detail="Event type not found")
+    # Find the event type by its old name (from URL path)
+    event_type_obj = next((et for et in timeline["event_types"] if et["name"] == type_name), None)
+    if not event_type_obj:
+        raise HTTPException(status_code=404, detail=f"Event type '{type_name}' not found")
     
-    # Update all events using this type
+    # If the name is being changed, check if the new name already exists
+    if event_type["name"] != type_name:
+        if any(et["name"] == event_type["name"] for et in timeline["event_types"]):
+            raise HTTPException(status_code=400, detail=f"Event type '{event_type['name']}' already exists")
+    
+    # Update all events that reference this type
     for event in timeline["events"]:
         if event["type"] == type_name:
             event["type"] = event_type["name"]
     
-    timeline["event_types"][event_type_index] = event_type
+    # Update the event type itself
+    event_type_obj["name"] = event_type["name"]
+    event_type_obj["color"] = event_type["color"]
+    
     save_timeline(timeline)
-    return event_type
+    return event_type_obj
 
 @app.delete("/api/timelines/{timeline_id}/event-types/{type_name}")
 async def delete_event_type(timeline_id: str, type_name: str):

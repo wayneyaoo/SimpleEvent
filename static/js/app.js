@@ -42,7 +42,7 @@ const app = createApp({
         ];
         const newEventType = ref({ name: '', color: popularColors[0].value });
         const editingEvent = ref(null);
-        const editingEventType = ref(null);
+        const editingEventType = ref({ name: '', color: popularColors[0].value, originalName: '' });
 
         // Computed
         const hasTimelines = computed(() => timelines.value.length > 0);
@@ -211,25 +211,37 @@ const app = createApp({
 
         const updateEventType = async () => {
             try {
-                const oldName = editingEventType.value.name;
-                await axios.put(`/api/timelines/${selectedTimeline.value.id}/event-types/${oldName}`, editingEventType.value);
+                const oldName = editingEventType.value.originalName;
+                const newName = editingEventType.value.name;
+                const newColor = editingEventType.value.color;
+                
+                await axios.put(`/api/timelines/${selectedTimeline.value.id}/event-types/${encodeURIComponent(oldName)}`, {
+                    name: newName,
+                    color: newColor
+                });
                 
                 // Update all events using this type
                 selectedTimeline.value.events.forEach(event => {
                     if (event.type === oldName) {
-                        event.type = editingEventType.value.name;
+                        event.type = newName;
                     }
                 });
                 
                 // Update the event type in the list
                 const index = selectedTimeline.value.event_types.findIndex(et => et.name === oldName);
                 if (index !== -1) {
-                    selectedTimeline.value.event_types[index] = { ...editingEventType.value };
+                    selectedTimeline.value.event_types[index] = { name: newName, color: newColor };
                 }
                 
                 showEditEventTypeModal.value = false;
+                editingEventType.value = { name: '', color: popularColors[0].value, originalName: '' };  // Reset the form
             } catch (error) {
                 console.error('Error updating event type:', error);
+                if (error.response && error.response.status === 400) {
+                    showDuplicateEventTypeWarning.value = true;
+                } else {
+                    alert('Failed to update event type. Please try again.');
+                }
             }
         };
 
@@ -239,7 +251,11 @@ const app = createApp({
         };
 
         const editEventType = (eventType) => {
-            editingEventType.value = { ...eventType };
+            editingEventType.value = { 
+                name: eventType.name,
+                color: eventType.color,
+                originalName: eventType.name  // Store the original name
+            };
             showEditEventTypeModal.value = true;
         };
 
