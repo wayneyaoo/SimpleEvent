@@ -65,12 +65,20 @@ const app = createApp({
         const loadTimelines = async () => {
             try {
                 const response = await axios.get('/api/timelines');
-                timelines.value = response.data;
+                // Map the response data to match our frontend structure
+                timelines.value = response.data.map(timeline => ({
+                    id: timeline.id,
+                    name: timeline.name,
+                    description: timeline.description,
+                    events: timeline.events || [],
+                    event_types: timeline.event_types || []
+                }));
                 if (timelines.value.length > 0 && !selectedTimeline.value) {
                     selectTimeline(timelines.value[0]);
                 }
             } catch (error) {
                 console.error('Error loading timelines:', error);
+                alert('Failed to load timelines. Please try again.');
             }
         };
 
@@ -80,19 +88,31 @@ const app = createApp({
 
         const createTimeline = async () => {
             try {
-                const response = await axios.post('/api/timelines', newTimeline.value);
-                timelines.value.push(response.data);
-                selectTimeline(response.data);
+                const response = await axios.post('/api/timeline', {
+                    name: newTimeline.value.name,
+                    description: newTimeline.value.description
+                });
+                // Map the response data to match our frontend structure
+                const timeline = {
+                    id: response.data.id,
+                    name: response.data.name,
+                    description: response.data.description,
+                    events: response.data.events || [],
+                    event_types: response.data.event_types || []
+                };
+                timelines.value.push(timeline);
+                selectTimeline(timeline);
                 showCreateTimelineModal.value = false;
                 newTimeline.value = { name: '', description: '' };
             } catch (error) {
                 console.error('Error creating timeline:', error);
+                alert('Failed to create timeline. Please try again.');
             }
         };
 
         const updateTimeline = async () => {
             try {
-                await axios.put(`/api/timelines/${selectedTimeline.value.id}`, selectedTimeline.value);
+                await axios.put(`/api/timeline/${selectedTimeline.value.id}`, selectedTimeline.value);
                 showEditTimelineModal.value = false;
             } catch (error) {
                 console.error('Error updating timeline:', error);
@@ -101,7 +121,7 @@ const app = createApp({
 
         const deleteTimeline = async () => {
             try {
-                await axios.delete(`/api/timelines/${selectedTimeline.value.id}`);
+                await axios.delete(`/api/timeline/${selectedTimeline.value.id}`);
                 timelines.value = timelines.value.filter(t => t.id !== selectedTimeline.value.id);
                 selectedTimeline.value = null;
                 showDeleteTimelineModal.value = false;
@@ -114,10 +134,13 @@ const app = createApp({
             if (!newEvent.value.type) return;
 
             try {
-                const response = await axios.post(`/api/timelines/${selectedTimeline.value.id}/events`, {
+                // Convert local date to UTC before sending to server
+                const eventToCreate = {
                     ...newEvent.value,
-                    time: newEvent.value.time || new Date().toISOString().split('T')[0]
-                });
+                    time: newEvent.value.time ? new Date(newEvent.value.time).toISOString() : new Date().toISOString()
+                };
+
+                const response = await axios.post(`/api/timeline/${selectedTimeline.value.id}/events`, eventToCreate);
                 selectedTimeline.value.events.push(response.data);
                 newEvent.value = { type: '', time: '', note: '' };
             } catch (error) {
@@ -127,10 +150,16 @@ const app = createApp({
 
         const updateEvent = async () => {
             try {
-                await axios.put(`/api/timelines/${selectedTimeline.value.id}/events/${editingEvent.value.id}`, editingEvent.value);
+                // Convert local date back to UTC before sending to server
+                const eventToUpdate = {
+                    ...editingEvent.value,
+                    time: editingEvent.value.time ? new Date(editingEvent.value.time).toISOString() : null
+                };
+                
+                await axios.put(`/api/timeline/${selectedTimeline.value.id}/events/${editingEvent.value.id}`, eventToUpdate);
                 const index = selectedTimeline.value.events.findIndex(e => e.id === editingEvent.value.id);
                 if (index !== -1) {
-                    selectedTimeline.value.events[index] = editingEvent.value;
+                    selectedTimeline.value.events[index] = eventToUpdate;
                 }
                 showEditEventModal.value = false;
             } catch (error) {
@@ -145,7 +174,7 @@ const app = createApp({
 
         const confirmDeleteEvent = async () => {
             try {
-                await axios.delete(`/api/timelines/${selectedTimeline.value.id}/events/${eventToDelete.value.id}`);
+                await axios.delete(`/api/timeline/${selectedTimeline.value.id}/events/${eventToDelete.value.id}`);
                 selectedTimeline.value.events = selectedTimeline.value.events.filter(e => e.id !== eventToDelete.value.id);
                 showDeleteEventConfirmation.value = false;
                 eventToDelete.value = null;
@@ -171,7 +200,7 @@ const app = createApp({
             }
 
             try {
-                const response = await axios.post(`/api/timelines/${selectedTimeline.value.id}/event-types`, newEventType.value);
+                const response = await axios.post(`/api/timeline/${selectedTimeline.value.id}/event-types`, newEventType.value);
                 if (response.status === 200) {
                     selectedTimeline.value.event_types.push(response.data);
                     newEventType.value = { name: '', color: '#3b82f6' };
@@ -199,7 +228,7 @@ const app = createApp({
 
         const confirmDeleteEventType = async () => {
             try {
-                await axios.delete(`/api/timelines/${selectedTimeline.value.id}/event-types/${encodeURIComponent(eventTypeToDelete.value.name)}`);
+                await axios.delete(`/api/timeline/${selectedTimeline.value.id}/event-types/${encodeURIComponent(eventTypeToDelete.value.name)}`);
                 selectedTimeline.value.event_types = selectedTimeline.value.event_types.filter(t => t.name !== eventTypeToDelete.value.name);
                 showDeleteEventTypeConfirmation.value = false;
                 eventTypeToDelete.value = null;
@@ -215,7 +244,7 @@ const app = createApp({
                 const newName = editingEventType.value.name;
                 const newColor = editingEventType.value.color;
                 
-                await axios.put(`/api/timelines/${selectedTimeline.value.id}/event-types/${encodeURIComponent(oldName)}`, {
+                await axios.put(`/api/timeline/${selectedTimeline.value.id}/event-types/${encodeURIComponent(oldName)}`, {
                     name: newName,
                     color: newColor
                 });
@@ -246,7 +275,14 @@ const app = createApp({
         };
 
         const editEvent = (event) => {
-            editingEvent.value = { ...event };
+            // Store the original UTC date
+            editingEvent.value = { 
+                ...event,
+                // Convert UTC to local for the input
+                time: event.time ? new Date(event.time).toLocaleDateString('en-CA', {
+                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                }) : ''
+            };
             showEditEventModal.value = true;
         };
 
@@ -266,21 +302,44 @@ const app = createApp({
 
         const handleFileImport = (event) => {
             const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    try {
-                        const timeline = JSON.parse(e.target.result);
-                        const response = await axios.post('/api/timelines', timeline);
-                        timelines.value.push(response.data);
-                        selectTimeline(response.data);
-                        showImportTimelineModal.value = false;
-                    } catch (error) {
-                        console.error('Error importing timeline:', error);
-                    }
-                };
-                reader.readAsText(file);
+            if (!file) return;
+
+            // Validate file type
+            if (!file.name.endsWith('.json')) {
+                alert('Please select a JSON file');
+                return;
             }
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const importedTimeline = JSON.parse(e.target.result);
+                    
+                    // Validate the imported timeline structure
+                    if (!importedTimeline.name) {
+                        throw new Error('Invalid timeline format: missing timeline name');
+                    }
+
+                    const response = await axios.post('/api/timeline', importedTimeline);
+                    
+                    // Map the response data to match our frontend structure
+                    const timeline = {
+                        id: response.data.id,
+                        name: response.data.name,
+                        description: response.data.description,
+                        events: response.data.events || [],
+                        event_types: response.data.event_types || []
+                    };
+
+                    timelines.value.push(timeline);
+                    selectTimeline(timeline);
+                    showImportTimelineModal.value = false;
+                } catch (error) {
+                    console.error('Error importing timeline:', error);
+                    alert(`Failed to import timeline: ${error.message}`);
+                }
+            };
+            reader.readAsText(file);
         };
 
         const exportTimelineAsPDF = async () => {
@@ -291,7 +350,12 @@ const app = createApp({
         const formatDate = (dateString) => {
             if (!dateString) return '';
             const date = new Date(dateString);
-            return date.toLocaleDateString();
+            return date.toLocaleDateString(undefined, { 
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            });
         };
 
         const handleKeydown = (event) => {

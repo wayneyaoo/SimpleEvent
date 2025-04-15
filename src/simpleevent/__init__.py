@@ -1,3 +1,0 @@
-"""
-SimpleEvent package initialization.
-""" 
